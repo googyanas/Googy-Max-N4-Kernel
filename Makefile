@@ -377,7 +377,7 @@ LINUXINCLUDE    := \
 KBUILD_CPPFLAGS := -D__KERNEL__
 
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
-		   -fno-strict-aliasing -fno-common -munaligned-access -fno-pic -mtune=cortex-a53 \
+		   -fno-strict-aliasing -fno-common -munaligned-access \
 		   -Werror-implicit-function-declaration \
 		   -Wno-maybe-uninitialized -Wno-unused-variable \
 		   -Wno-format-security \
@@ -385,7 +385,8 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Wno-error=declaration-after-statement \
 		   -fdiagnostics-show-option -Werror \
 		   -std=gnu89 -Wno-discarded-array-qualifiers -Wno-logical-not-parentheses -Wno-array-bounds -Wno-switch
-
+# -fno-pic -mtune=cortex-a53 
+		   
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
 KBUILD_AFLAGS   := -D__ASSEMBLY__
