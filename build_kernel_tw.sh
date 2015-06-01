@@ -48,7 +48,7 @@ ls -lh $RAMFS_TMP.cpio
 gzip -9 $RAMFS_TMP.cpio
 cd -
 
-chmod a+r arch/arm/boot/dt.img
+chmod a+r tools/dt.img
 
 tools/mkbootimg --kernel $KERNELDIR/arch/arm/boot/zImage --dt tools/dt.img --ramdisk /home/googy/Kernel/Googy-Max-N4/Ramdisk_tmp/tmp.cpio.gz --base 0x10000000 --kernel_offset 0x10000000 --ramdisk_offset 0x10008000 --tags_offset 0x10000100 --pagesize 2048 -o $KERNELDIR/boot.img
 
