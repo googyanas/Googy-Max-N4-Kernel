@@ -57,7 +57,7 @@ mv -f -v /home/googy/Kernel/Googy-Max-N4/Kernel/boot.img /home/googy/Kernel/Goog
 cd /home/googy/Kernel/Googy-Max-N4/Release
 zip -r ../Googy-Max-N4_Kernel_${1}_CWM.zip .
 
-# adb push /home/googy/Anas/Googy-Max4-Kernel/GoogyMax4_TW5-Kernel_${1}_CWM.zip /storage/sdcard0/GoogyMax4_TW5-Kernel_${1}_CWM.zip
+adb push /home/googy/Kernel/Googy-Max-N4/Googy-Max-N4_Kernel_${1}_CWM.zip /storage/sdcard0/Googy-Max-N4_Kernel_${1}_CWM.zip
 
 # adb push /home/googy/Anas/Googy-Max4-Kernel/GoogyMax4_TW-Kernel_${1}_CWM.zip /storage/sdcard0/update-gmax4.zip
 # 
