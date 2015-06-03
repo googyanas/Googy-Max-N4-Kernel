@@ -20,6 +20,7 @@ export ARCH=arm
 
 cd $KERNELDIR/
 make -j5 || exit 1
+#  CONFIG_DEBUG_SECTION_MISMATCH=y
 
 #remove previous ramfs files
 rm -rf $RAMFS_TMP
