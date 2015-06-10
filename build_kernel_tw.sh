@@ -65,3 +65,5 @@ adb push /home/googy/Kernel/Googy-Max-N4/Googy-Max-N4_Kernel_${1}_CWM.zip /stora
 # adb shell su -c "echo 'boot-recovery ' > /cache/recovery/command"
 # adb shell su -c "echo '--update_package=/storage/sdcard0/update-gmax4.zip' >> /cache/recovery/command"
 # adb shell su -c "reboot recovery"
+
+adb kill-server
