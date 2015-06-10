@@ -1190,19 +1190,25 @@ void s3c_fb_activate_vsync(struct s3c_fb *sfb)
 	struct display_driver *dispdrv;
 	struct decon_psr_info psr;
 
-	dispdrv = get_display_driver();
-	disp_pm_runtime_get_sync(dispdrv);
-
-	mutex_lock(&sfb->vsync_info.irq_lock);
-	prev_refcount = sfb->vsync_info.irq_refcount++;
-	if (!prev_refcount) {
-		psr.psr_mode = sfb->psr_mode;
-		psr.trig_mode = sfb->trig_mode;
-		decon_reg_set_int(&psr, 1);
-	}
-	mutex_unlock(&sfb->vsync_info.irq_lock);
-
-	disp_pm_runtime_put_sync(dispdrv);
+	if (sfb->psr_mode != S3C_FB_MIPI_COMMAND_MODE) {
+	        dispdrv = get_display_driver();
+	        disp_pm_runtime_get_sync(dispdrv);
+        
+	        mutex_lock(&sfb->vsync_info.irq_lock);
+	        prev_refcount = sfb->vsync_info.irq_refcount++;
+	        if (!prev_refcount) {
+		        psr.psr_mode = sfb->psr_mode;
+		        psr.trig_mode = sfb->trig_mode;
+		        decon_reg_set_int(&psr, 1);
+	        }
+	        mutex_unlock(&sfb->vsync_info.irq_lock);
+        
+	        disp_pm_runtime_put_sync(dispdrv);
+        } else {
+	        mutex_lock(&sfb->vsync_info.irq_lock);
+	        sfb->vsync_info.irq_refcount++;
+	        mutex_unlock(&sfb->vsync_info.irq_lock);
+        }
 }
 
 void s3c_fb_deactivate_vsync(struct s3c_fb *sfb)
@@ -1211,20 +1217,26 @@ void s3c_fb_deactivate_vsync(struct s3c_fb *sfb)
 	struct display_driver *dispdrv;
 	struct decon_psr_info psr;
 
-	dispdrv = get_display_driver();
-	disp_pm_runtime_get_sync(dispdrv);
-
-	mutex_lock(&sfb->vsync_info.irq_lock);
-	new_refcount = --sfb->vsync_info.irq_refcount;
-	WARN_ON(new_refcount < 0);
-	if (!new_refcount) {
-		psr.psr_mode = sfb->psr_mode;
-		psr.trig_mode = sfb->trig_mode;
-		decon_reg_set_int(&psr, 0);
-	}
-	mutex_unlock(&sfb->vsync_info.irq_lock);
-
-	disp_pm_runtime_put_sync(dispdrv);
+	if (sfb->psr_mode != S3C_FB_MIPI_COMMAND_MODE) {
+	        dispdrv = get_display_driver();
+	        disp_pm_runtime_get_sync(dispdrv);
+        
+	        mutex_lock(&sfb->vsync_info.irq_lock);
+	        new_refcount = --sfb->vsync_info.irq_refcount;
+	        WARN_ON(new_refcount < 0);
+	        if (!new_refcount) {
+		        psr.psr_mode = sfb->psr_mode;
+		        psr.trig_mode = sfb->trig_mode;
+		        decon_reg_set_int(&psr, 0);
+	        }
+	        mutex_unlock(&sfb->vsync_info.irq_lock);
+        
+	        disp_pm_runtime_put_sync(dispdrv);
+	} else {
+		mutex_lock(&sfb->vsync_info.irq_lock);
+		--sfb->vsync_info.irq_refcount;
+		mutex_unlock(&sfb->vsync_info.irq_lock);
+        }
 }
 
 EXPORT_SYMBOL(s3c_fb_activate_vsync);
@@ -1316,10 +1328,15 @@ static irqreturn_t s3c_fb_irq(int irq, void *dev_id)
 	if (irq_sts_reg & VIDINTCON1_INT_FRAME) {
 		/* VSYNC interrupt, accept it */
 		writel(VIDINTCON1_INT_FRAME, regs + VIDINTCON1);
+		if (sfb->psr_mode == S3C_FB_MIPI_COMMAND_MODE) {
+			wake_up_interruptible_all(&sfb->wait_frmint);
+			sfb->framint_cnt++;
+		} else {
 #if !defined(CONFIG_FB_I80IF) && !defined(CONFIG_FB_I80_HW_TRIGGER)
-		sfb->vsync_info.timestamp = timestamp;
-		wake_up_interruptible_all(&sfb->vsync_info.wait);
+			sfb->vsync_info.timestamp = timestamp;
+			wake_up_interruptible_all(&sfb->vsync_info.wait);
 #endif
+		}
 	}
 	if (irq_sts_reg & VIDINTCON1_INT_FIFO) {
 		writel(VIDINTCON1_INT_FIFO, regs + VIDINTCON1);
@@ -2170,6 +2187,39 @@ static void s3c_set_win_update_config(struct s3c_fb *sfb,
 }
 #endif
 
+#ifdef CONFIG_LCD_ALPM
+static void s3c_fb_otf_clear(struct s3c_fb *sfb)
+{
+	struct display_driver *dispdrv;
+
+	dispdrv	= get_display_driver();
+#if defined(CONFIG_FB_I80_COMMAND_MODE)	&& defined(CONFIG_LCD_PCD)
+	if ((!sfb->output_on &&	sfb->power_state == POWER_DOWN)	|| sfb->pcd_detected ||	sfb->blank_mode	!= FB_BLANK_UNBLANK)
+#else
+	if ((!sfb->output_on &&	sfb->power_state == POWER_DOWN)	|| sfb->blank_mode != FB_BLANK_UNBLANK)
+#endif
+	{
+		return;
+	}
+
+	disp_pm_runtime_get_sync(dispdrv);
+#ifdef CONFIG_FB_HIBERNATION_DISPLAY
+	disp_pm_gate_lock(dispdrv, true);
+#endif
+
+#ifdef CONFIG_ION_EXYNOS
+	flush_kthread_worker(&sfb->update_regs_worker);
+#endif
+
+	s3c_fb_disable_otf(sfb);
+
+#ifdef CONFIG_FB_HIBERNATION_DISPLAY
+	disp_pm_gate_lock(dispdrv, false);
+#endif
+	disp_pm_runtime_put_sync(dispdrv);
+}
+#endif
+
 static int s3c_fb_set_win_config(struct s3c_fb *sfb,
 		struct s3c_fb_win_config_data *win_data)
 {
@@ -2184,12 +2234,40 @@ static int s3c_fb_set_win_config(struct s3c_fb *sfb,
 	struct sync_pt *pt;
 	int fd;
 	unsigned int bw = 0;
+#ifdef CONFIG_LCD_ALPM
+	int all_win_disabled;
+#endif
 
 	fd = get_unused_fd();
 	if (fd < 0)
 		return fd;
 
 	mutex_lock(&sfb->output_lock);
+
+#ifdef CONFIG_LCD_ALPM
+	if(dsim_for_decon->lcd_alpm) {
+		all_win_disabled = true;
+		for (i = 0; i < sfb->variant.nr_windows; i++) {
+			if( win_config[i].state != S3C_FB_WIN_STATE_DISABLED )
+			{
+				all_win_disabled = false;
+				break;
+			}
+		}
+		if( all_win_disabled ) {
+			dev_info(sfb->dev, "%s [ALPM] : all_win_disabled", __func__ );
+			s3c_fb_otf_clear(sfb);
+			sfb->timeline_max++;
+			pt = sw_sync_pt_create(sfb->timeline, sfb->timeline_max);
+			fence = sync_fence_create("display", pt);
+			sync_fence_install(fence, fd);
+			win_data->fence = fd;
+
+			sw_sync_timeline_inc(sfb->timeline, 1);
+			goto err;
+		}
+	}
+#endif
 
 #if defined(CONFIG_FB_I80_COMMAND_MODE) && defined(CONFIG_LCD_PCD)
 	if ((!sfb->output_on && sfb->power_state == POWER_DOWN) || sfb->pcd_detected || sfb->blank_mode != FB_BLANK_UNBLANK)
@@ -2539,6 +2617,28 @@ static void s3c_fb_to_psr_info(struct s3c_fb *sfb, struct decon_psr_info *psr)
 {
 	psr->psr_mode = sfb->psr_mode;
 	psr->trig_mode = sfb->trig_mode;
+}
+
+static int s3c_fb_wait_for_frame_intr(struct s3c_fb *sfb, u32 timeout)
+{
+	int framint_cnt = sfb->framint_cnt;
+	void __iomem  *regs = sfb->regs;
+	int ret;
+	u32 frame_id;
+
+	frame_id = readl(regs + DECON_CRFMID);
+	if (frame_id)
+		return 0;
+
+	ret = wait_event_interruptible_timeout(sfb->wait_frmint,
+			(framint_cnt !=  sfb->framint_cnt),
+			msecs_to_jiffies(timeout));
+
+	if (timeout && ret == 0) {
+		dev_err(sfb->dev, "wait for frame interrupt is timed-out");
+	}
+
+	return 0;
 }
 
 static void s3c_fb_vidout_start(struct decon_psr_info *psr)
@@ -2911,6 +3011,7 @@ static void s3c_fb_update_regs(struct s3c_fb *sfb, struct s3c_reg_data *regs)
 				readl(sfb->regs + SHD_VIDW_BUF_START(i)));
 	}
 
+	s3c_fb_wait_for_frame_intr(sfb, 50);
 	count = 9000;
 	decon_reg_wait_for_update_timeout(count * 100);
 
@@ -4312,8 +4413,8 @@ int create_decon_display_controller(struct platform_device *pdev)
 	int default_win;
 	int i;
 	int ret = 0;
-#if defined(CONFIG_S5P_LCD_INIT)
 	struct decon_psr_info psr;
+#if defined(CONFIG_S5P_LCD_INIT)
 	struct decon_regs_data win_regs;
 #endif
 
@@ -4397,14 +4498,13 @@ int create_decon_display_controller(struct platform_device *pdev)
 		goto resource_exception;
 	}
 
-#ifndef CONFIG_FB_I80_COMMAND_MODE
 	ret = devm_request_irq(dev, dispdrv->decon_driver.irq_no, s3c_fb_irq,
 			  0, "s3c_fb", sfb);
 	if (ret) {
 		dev_err(dev, "video irq request failed\n");
 		goto resource_exception;
 	}
-#endif
+
 	ret = devm_request_irq(dev, dispdrv->decon_driver.fifo_irq_no,
 	s3c_fb_irq, 0, "s3c_fb", sfb);
 	if (ret) {
@@ -4465,6 +4565,7 @@ int create_decon_display_controller(struct platform_device *pdev)
 	prev_gsc_local_cnt = 0;
 #endif
 
+	init_waitqueue_head(&sfb->wait_frmint);
 	/* we have the register setup, start allocating framebuffers */
 	for (i = 0; i < fbdrv->variant.nr_windows; i++) {
 		win = i;
@@ -4568,6 +4669,11 @@ int create_decon_display_controller(struct platform_device *pdev)
 	decon_reg_init_probe(&p);
 	decon_reg_set_trigger(sfb->trig_mode, DECON_TRIG_DISABLE);
 #endif
+
+	if (sfb->psr_mode == S3C_FB_MIPI_COMMAND_MODE) {
+		s3c_fb_to_psr_info(sfb, &psr);
+		decon_reg_set_int(&psr, 1);
+	}
 
 	platform_set_drvdata(pdev, sfb);
 
@@ -4820,6 +4926,9 @@ static int s3c_fb_enable(struct s3c_fb *sfb)
 	decon_reg_init(&p);
 
 	s3c_fb_to_psr_info(sfb, &psr);
+	sfb->framint_cnt = 0;
+	if (sfb->psr_mode == S3C_FB_MIPI_COMMAND_MODE)
+		decon_reg_set_int(&psr, 1);
 #ifdef CONFIG_LCD_ALPM
 	if(!dsim_for_decon->lcd_alpm)
 #endif
@@ -5025,6 +5134,7 @@ int decon_hibernation_power_on(struct display_driver *dispdrv)
 {
 	int ret = 0;
 	struct s3c_fb *sfb = dispdrv->decon_driver.sfb;
+	struct decon_psr_info psr;
 
 	mutex_lock(&sfb->output_lock);
 
@@ -5058,6 +5168,10 @@ int decon_hibernation_power_on(struct display_driver *dispdrv)
 
 	/* use platform specified window as the basis for the lcd timings */
 	decon_reg_configure_lcd(sfb->lcd_update);
+	if (sfb->psr_mode == S3C_FB_MIPI_COMMAND_MODE) {
+		s3c_fb_to_psr_info(sfb, &psr);
+		decon_reg_set_int(&psr, 1);
+	}
 
 #ifdef CONFIG_S5P_DP
 	writel(DPCLKCON_ENABLE, sfb->regs + DPCLKCON);

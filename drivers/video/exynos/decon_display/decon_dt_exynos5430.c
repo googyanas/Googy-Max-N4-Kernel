@@ -277,14 +277,13 @@ static int parse_interrupt_dt_exynos5430(struct platform_device *pdev,
 	int ret = 0;
 	struct resource *res;
 
-#ifndef CONFIG_FB_I80_COMMAND_MODE
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 1);
 	if (res == NULL) {
 		pr_err("getting video irq resource failed\n");
 		return -ENOENT;
 	}
 	ddp->decon_driver.irq_no = res->start;
-#endif
+
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (res == NULL) {
 		pr_err("getting fifo irq resource failed\n");

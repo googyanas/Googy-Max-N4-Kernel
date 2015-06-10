@@ -400,7 +400,8 @@ struct s3c_fb {
 #endif
 	struct exynos5_bus_mif_handle *fb_mif_handle;
 	struct exynos5_bus_int_handle *fb_int_handle;
-
+	wait_queue_head_t               wait_frmint;
+	int	framint_cnt;
 	struct decon_lcd *lcd_info;
 	atomic_t	dsd_clk_ref_cnt;
 #ifdef CONFIG_FB_WINDOW_UPDATE
