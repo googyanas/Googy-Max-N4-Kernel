@@ -3,7 +3,7 @@ export KERNELDIR=`readlink -f .`
 export RAMFS_SOURCE="/home/googy/Kernel/Googy-Max-N4/Ramdisk"
 export PARENT_DIR=`readlink -f ..`
 export USE_SEC_FIPS_MODE=true
-export CROSS_COMPILE=/usr/bin/arm-linux-gnueabihf-
+export CROSS_COMPILE=/usr/bin/arm-linux-gnu-
 
 RAMFS_TMP="/home/googy/Kernel/Googy-Max-N4/Ramdisk_tmp/tmp"
 
@@ -19,7 +19,7 @@ export KCONFIG_NOTIMESTAMP=true
 export ARCH=arm
 
 cd $KERNELDIR/
-make -j5 || exit 1
+nice -n15 make -j5 || exit 1
 #  CONFIG_DEBUG_SECTION_MISMATCH=y
 
 #remove previous ramfs files
