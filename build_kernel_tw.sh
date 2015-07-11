@@ -3,7 +3,7 @@ export KERNELDIR=`readlink -f .`
 export RAMFS_SOURCE="/home/googy/Kernel/Googy-Max-N4/Ramdisk"
 export PARENT_DIR=`readlink -f ..`
 export USE_SEC_FIPS_MODE=true
-export CROSS_COMPILE=/usr/bin/arm-linux-gnueabihf-
+export CROSS_COMPILE=/usr/bin/arm-linux-gnu-
 
 RAMFS_TMP="/home/googy/Kernel/Googy-Max-N4/Ramdisk_tmp/tmp"
 
