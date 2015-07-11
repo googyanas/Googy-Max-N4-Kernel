@@ -138,9 +138,9 @@ static int exynos5433_bus_table_CA7[CPUFREQ_LEVEL_END_CA7] = {
 	413000,		/* 700 MHz */
 	413000,		/* 600 MHz */
 	413000,		/* 500 MHz */
-	0,		/* 400 MHz */
-	0,		/* 300 MHz */
-	0,		/* 200 MHz */
+	413000,		/* 400 MHz */
+	413000,		/* 300 MHz */
+	413000,		/* 200 MHz */
 };
 
 static void exynos5433_set_clkdiv_CA7(unsigned int div_index)
