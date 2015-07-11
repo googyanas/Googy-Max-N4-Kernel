@@ -59,6 +59,4 @@ plat-omap
 plat-orion
 plat-pxa
 plat-versatile
-tools
-vfp
 xen
