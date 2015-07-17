@@ -379,7 +379,7 @@ LINUXINCLUDE    := \
 KBUILD_CPPFLAGS := -D__KERNEL__
 
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
-		   -fno-strict-aliasing -fno-common -mfpu=neon-vfpv4 -fno-pic -mtune=cortex-a53 \
+		   -fno-strict-aliasing -fno-common -munaligned-access -mfpu=neon-vfpv4 -fno-pic -mtune=cortex-a53 \
 		   -Werror-implicit-function-declaration \
 		   -Wno-maybe-uninitialized -Wno-unused-variable \
 		   -Wno-format-security \
