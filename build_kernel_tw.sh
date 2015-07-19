@@ -19,7 +19,7 @@ export KCONFIG_NOTIMESTAMP=true
 export ARCH=arm
 
 cd $KERNELDIR/
-make -j5 || exit 1
+make -j4 || exit 1
 #  CONFIG_DEBUG_SECTION_MISMATCH=y
 
 #remove previous ramfs files
@@ -38,10 +38,10 @@ find $RAMFS_TMP -name EMPTY_DIRECTORY -exec rm -rf {} \;
 #remove mercurial repository
 rm -rf $RAMFS_TMP/.hg
 #copy modules into ramfs
-mkdir -p /home/googy/Kernel/Googy-Max-N4/Release/system/lib/modules
-rm -rf /home/googy/Kernel/Googy-Max-N4/Release/system/lib/modules/*
-find -name '*.ko' -exec cp -av {} /home/googy/Kernel/Googy-Max-N4/Release/system/lib/modules/ \;
-${CROSS_COMPILE}strip --strip-unneeded /home/googy/Kernel/Googy-Max-N4/Release/system/lib/modules/*
+# mkdir -p /home/googy/Kernel/Googy-Max-N4/Release/system/lib/modules
+# rm -rf /home/googy/Kernel/Googy-Max-N4/Release/system/lib/modules/*
+# find -name '*.ko' -exec cp -av {} /home/googy/Kernel/Googy-Max-N4/Release/system/lib/modules/ \;
+# ${CROSS_COMPILE}strip --strip-unneeded /home/googy/Kernel/Googy-Max-N4/Release/system/lib/modules/*
 
 cd $RAMFS_TMP
 find | fakeroot cpio -H newc -o > $RAMFS_TMP.cpio 2>/dev/null
