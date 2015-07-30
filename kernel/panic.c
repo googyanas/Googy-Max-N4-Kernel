@@ -139,7 +139,7 @@ void panic(const char *fmt, ...)
 	show_exynos_cmu();
 #endif
 
-//ggy	sysrq_sched_debug_show();
+	sysrq_sched_debug_show();
 
 	/*
 	 * If we have crashed and we have a crash kernel loaded let it handle
