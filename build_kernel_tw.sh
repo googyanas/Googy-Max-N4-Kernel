@@ -11,15 +11,22 @@ VER="\"-Googy-Max-N4-v$1\""
 cp -f /home/googy/Kernel/Googy-Max-N4/Kernel/arch/arm/configs/0googymax_exynos5433-trelte_defconfig /home/googy/Kernel/Googy-Max-N4/0googymax_exynos5433-trelte_defconfig
 sed "s#^CONFIG_LOCALVERSION=.*#CONFIG_LOCALVERSION=$VER#" /home/googy/Kernel/Googy-Max-N4/0googymax_exynos5433-trelte_defconfig > /home/googy/Kernel/Googy-Max-N4/Kernel/arch/arm/configs/0googymax_exynos5433-trelte_defconfig
 
-make ARCH=arm 0googymax_exynos5433-trelte_defconfig  || exit 1
+export KCONFIG_NOTIMESTAMP=true
+export ARCH=arm
+export SUB_ARCH=arm
+
+make ARCH=arm 0googymax_exynos5433-trelte_defconfig || exit 1
 
 . $KERNELDIR/.config
 
-export KCONFIG_NOTIMESTAMP=true
-export ARCH=arm
-
 cd $KERNELDIR/
-make -j4 || exit 1
+
+
+make -j4 zImage || exit 1
+tools/dtbTool -o dt.img -s 2048 -p ./scripts/dtc/ ./arch/arm/boot/dts/ || exit 1
+
+# make -j4 || exit 1
+
 #  CONFIG_DEBUG_SECTION_MISMATCH=y
 
 #remove previous ramfs files
@@ -52,6 +59,8 @@ cd -
 chmod a+r tools/dt.img
 
 tools/mkbootimg --kernel $KERNELDIR/arch/arm/boot/zImage --dt tools/dt.img --ramdisk /home/googy/Kernel/Googy-Max-N4/Ramdisk_tmp/tmp.cpio.gz --base 0x10000000 --kernel_offset 0x10000000 --ramdisk_offset 0x10008000 --tags_offset 0x10000100 --pagesize 2048 -o $KERNELDIR/boot.img
+
+# tools/mkbootimg --kernel $KERNELDIR/arch/arm/boot/zImage --dt $KERNELDIR/dt.img --ramdisk /home/googy/Kernel/Googy-Max-N4/Ramdisk_tmp/tmp.cpio.gz --base 0x10000000 --kernel_offset 0x10000000 --ramdisk_offset 0x10008000 --tags_offset 0x10000100 --pagesize 2048 -o boot.img || exit 1
 
 cd /home/googy/Kernel/Googy-Max-N4
 mv -f -v /home/googy/Kernel/Googy-Max-N4/Kernel/boot.img /home/googy/Kernel/Googy-Max-N4/Release/boot.img
